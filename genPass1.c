@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 //code that generates all possible combinations of all 95 printable ASCII characters (32-126) with the last three 
 //characters are numbers and accepts four input parameters, minLength, maxLength, MBPerFile and path to specify the range 
 //of lengths of the combinations, the maximum size of the file and the path to save the files:
@@ -11,57 +10,49 @@ The main function asks the user to input the values of these parameters and then
 The generateCombinations function uses recursion to generate all possible combinations and writes them to the file in the specified path.
 */
 
-
-=======
->>>>>>> parent of 409d0cf (Revert "Works, but to few chars used")
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-const char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
-const int num_characters = strlen(characters);
-
-void generateCombinations(FILE *fp, int minLength, int maxLength, int currentLength, char *currentCombination) {
-    if (currentLength >= minLength) {
-        fprintf(fp, "%s\n", currentCombination);
-    }
-
-    if (currentLength == maxLength) {
+void generateCombinations(char *prefix, int remaining, int minLength, int maxLength, int MBPerFile) {
+    int i, j, k;
+    if (remaining == 0) {
+        // Print the combination
+        printf("%s\n", prefix);
         return;
     }
-
-    for (int i = 0; i < num_characters; i++) {
-        currentCombination[currentLength] = characters[i];
-        generateCombinations(fp, minLength, maxLength, currentLength + 1, currentCombination);
+    for (i = 32; i <= 126; i++) {
+        char newPrefix[remaining + 1];
+        sprintf(newPrefix, "%s%c", prefix, i);
+        if (remaining == 3) {
+            for (j = '0'; j <= '9'; j++) {
+                for (k = '0'; k <= '9'; k++) {
+                    char newPrefix[remaining + 1];
+                    sprintf(newPrefix, "%s%c%c%c", prefix, i,j,k);
+                    // Print the combination
+                    //printf("%s\n", newPrefix);
+                }
+            }
+        }else{
+            if(remaining >= minLength && remaining <= maxLength){
+                generateCombinations(newPrefix, remaining - 1, minLength, maxLength, MBPerFile);
+            }
+        }
     }
 }
 
-int main(int argc, char *argv[]) {
-    if (argc < 5) {
-        printf("Usage: %s <min length> <max length> <max file size (MB)> <output file>\n", argv[0]);
-        return 1;
+int main() {
+    int minLength, maxLength, MBPerFile;
+    printf("Enter the minimum length: ");
+    scanf("%d", &minLength);
+    printf("Enter the maximum length: ");
+    scanf("%d", &maxLength);
+    printf("Enter the max file size in MB: ");
+    scanf("%d", &MBPerFile);
+    for(int i=minLength; i<=maxLength; i++) {
+        char prefix[i + 1];
+        memset(prefix, 0, sizeof(prefix));
+        generateCombinations(prefix, i, minLength, maxLength, MBPerFile);
     }
-
-    int minLength = atoi(argv[1]);
-    int maxLength = atoi(argv[2]);
-    int maxFileSize = atoi(argv[3]);
-    char *outputFile = argv[4];
-
-    FILE *fp;
-    fp = fopen(outputFile, "w");
-
-    if (fp == NULL) {
-        printf("Error opening file!\n");
-        return 1;
-    }
-
-    char *currentCombination = malloc((maxLength + 1) * sizeof(char));
-    currentCombination[maxLength] = '\0';
-
-    generateCombinations(minLength, maxLength, maxFileSize, fp, 0);
-
-
-    fclose(fp);
-
     return 0;
 }
