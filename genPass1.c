@@ -1,3 +1,19 @@
+<<<<<<< HEAD
+//code that generates all possible combinations of all 95 printable ASCII characters (32-126) with the last three 
+//characters are numbers and accepts four input parameters, minLength, maxLength, MBPerFile and path to specify the range 
+//of lengths of the combinations, the maximum size of the file and the path to save the files:
+
+/*
+The function generateCombinations generates all possible combinations of the printable ASCII characters from 32 to 126 and the last three characters are numbers. 
+It accepts four input parameters: minLength, maxLength, MBPerFile and path to specify the range of lengths of the 
+combinations, the maximum size of the file and the path to save the files. 
+The main function asks the user to input the values of these parameters and then calls the generateCombinations function. 
+The generateCombinations function uses recursion to generate all possible combinations and writes them to the file in the specified path.
+*/
+
+
+=======
+>>>>>>> parent of 409d0cf (Revert "Works, but to few chars used")
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
