@@ -1,37 +1,51 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 
-void generateCombinations(char* buffer, int bufferSize, int minLength, int maxLength) {
-  if (bufferSize == maxLength) {
-    printf("%s\n", buffer);
-    return;
-  }
-  for (char c = 'A'; c <= 'z'; c++) {
-    buffer[bufferSize] = c;
-    generateCombinations(buffer, bufferSize + 1, minLength, maxLength);
-  }
+const char characters[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+const int num_characters = strlen(characters);
+
+void generateCombinations(FILE *fp, int minLength, int maxLength, int currentLength, char *currentCombination) {
+    if (currentLength >= minLength) {
+        fprintf(fp, "%s\n", currentCombination);
+    }
+
+    if (currentLength == maxLength) {
+        return;
+    }
+
+    for (int i = 0; i < num_characters; i++) {
+        currentCombination[currentLength] = characters[i];
+        generateCombinations(fp, minLength, maxLength, currentLength + 1, currentCombination);
+    }
 }
 
-int main() {
-  int minLength, maxLength;
-  size_t maxFileSize;
+int main(int argc, char *argv[]) {
+    if (argc < 5) {
+        printf("Usage: %s <min length> <max length> <max file size (MB)> <output file>\n", argv[0]);
+        return 1;
+    }
 
-  printf("Enter the minimum length: ");
-  scanf("%d", &minLength);
-  printf("Enter the maximum length: ");
-  scanf("%d", &maxLength);
-  printf("Enter the max file size in MB: ");
-  scanf("%zd", &maxFileSize);
+    int minLength = atoi(argv[1]);
+    int maxLength = atoi(argv[2]);
+    int maxFileSize = atoi(argv[3]);
+    char *outputFile = argv[4];
 
-  maxFileSize *= 1024 * 1024;
+    FILE *fp;
+    fp = fopen(outputFile, "w");
 
-  for (int i = minLength; i <= maxLength; i++) {
-    char* buffer = malloc(i + 1);
-    memset(buffer, 0, i + 1);
-    generateCombinations(buffer, 0, minLength, maxLength);
-    free(buffer);
-  }
+    if (fp == NULL) {
+        printf("Error opening file!\n");
+        return 1;
+    }
 
-  return 0;
+    char *currentCombination = malloc((maxLength + 1) * sizeof(char));
+    currentCombination[maxLength] = '\0';
+
+    generateCombinations(minLength, maxLength, maxFileSize, fp, 0);
+
+
+    fclose(fp);
+
+    return 0;
 }
