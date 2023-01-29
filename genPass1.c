@@ -9,65 +9,73 @@ combinations, the maximum size of the file and the path to save the files.
 The main function asks the user to input the values of these parameters and then calls the generateCombinations function. 
 The generateCombinations function uses recursion to generate all possible combinations and writes them to the file in the specified path.
 */
-
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 
-#define MAX_COMBINATION_LENGTH 20
-#define MBPerFile 100
-#define MB_TO_BYTES(x) (x * 1024 * 1024)
-#define MAX_FILE_SIZE MB_TO_BYTES(MBPerFile)
+#define CHARSET_SIZE 62
+#define GB 1073741824 // 1 GB = 1073741824 bytes
 
-void generateCombinations(int length, char *combination, int currentLength, FILE *fp) {
-  if (length == currentLength) {
-    fprintf(fp, "%s\n", combination);
+char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+char path[] = "./output";
+
+void makeCombination(char *str, int index, int max, int min, int len, FILE *f) {
+  int i;
+  if (index == len) {
+    fprintf(f, "%s\n", str);
     return;
   }
 
-  for (int i = 33; i <= 126; i++) {
-    combination[currentLength] = (char)i;
-    generateCombinations(length, combination, currentLength + 1, fp);
+  for (i = 0; i < CHARSET_SIZE; i++) {
+    str[index] = charset[i];
+    makeCombination(str, index + 1, max, min, len, f);
   }
 }
 
 int main() {
-  int minLength, maxLength;
-  char combination[MAX_COMBINATION_LENGTH + 1];
-  FILE *fp;
-  time_t rawtime;
-  struct tm * timeinfo;
-  char path[100];
+  int i, min, max, counter = 0;
   char filename[100];
-  int fileCounter = 1;
-  int fileSize = 0;
+  char *str;
+  FILE *f;
 
   printf("Enter the minimum length: ");
-  scanf("%d", &minLength);
-
+  scanf("%d", &min);
   printf("Enter the maximum length: ");
-  scanf("%d", &maxLength);
+  scanf("%d", &max);
+  
+  if (min < 1 || max < 1 || max < min) {
+    printf("Invalid length\n");
+    return 1;
+  }
 
-  time(&rawtime);
-  timeinfo = localtime(&rawtime);
-  strftime(path, sizeof(path), "./%Y-%m-%d-%H-%M-%S", timeinfo);
+  // create output directory
   mkdir(path, 0700);
 
-  for (int i = minLength; i <= maxLength; i++) {
-    memset(combination, 0, sizeof(combination));
-    sprintf(filename, "%s/combinations-%d.txt", path, fileCounter);
-    fp = fopen(filename, "w");
-    generateCombinations(i, combination, 0, fp);
-    fileSize = ftell(fp);
-    if (fileSize >= MAX_FILE_SIZE) {
-      fileCounter++;
-      fclose(fp);
-      sprintf(filename, "%s/combinations-%d.txt", path, fileCounter);
-      fp = fopen(filename, "w");
-      fileSize = 0;
+  str = (char *) malloc(max + 1);
+  str[max] = '\0';
+
+  for (i = min; i <= max; i++) {
+    memset(str, 0, max + 1);
+    memset(filename, 0, 100);
+    sprintf(filename, "%s/combinations-%ld.txt", path, time(NULL));
+    f = fopen(filename, "w");
+
+    makeCombination(str, 0, max, min, i, f);
+    fclose(f);
+    counter++;
+
+    if (counter * i >= GB) {
+      counter = 0;
+      free(str);
+      str = (char *) malloc(max + 1);
+      str[max] = '\0';
     }
+
+    printf("Generated combinations with length %d and saved to file %s\n", i, filename);
   }
-  fclose(fp);
+
+  free(str);
   return 0;
 }
