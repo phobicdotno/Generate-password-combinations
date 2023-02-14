@@ -7,21 +7,23 @@
 #define NUM_CHARS 62  // Number of possible characters
 #define MAX_FILENAME_LEN 100  // Maximum length of filename
 
-void generate_combinations(int min_len, int max_len, int allow_special_chars);
+void generate_combinations(int min_len, int max_len, int allow_special_chars, int allow_repeats);
 
 int main() {
-    int min_len, max_len, allow_special_chars;
+    int min_len, max_len, allow_special_chars, allow_repeats;
     printf("Enter minimum length of combinations: ");
     scanf("%d", &min_len);
     printf("Enter maximum length of combinations: ");
     scanf("%d", &max_len);
     printf("Allow special characters? (0=no, 1=yes): ");
     scanf("%d", &allow_special_chars);
-    generate_combinations(min_len, max_len, allow_special_chars);
+    printf("Allow repetitive characters? (0=no, 1=yes): ");
+    scanf("%d", &allow_repeats);
+    generate_combinations(min_len, max_len, allow_special_chars, allow_repeats);
     return 0;
 }
 
-void generate_combinations(int min_len, int max_len, int allow_special_chars) {
+void generate_combinations(int min_len, int max_len, int allow_special_chars, int allow_repeats) {
     char* filename = (char*) malloc(MAX_FILENAME_LEN);
     char* combination = (char*) malloc(max_len + 1);
     memset(combination, 0, max_len + 1);
@@ -61,7 +63,7 @@ void generate_combinations(int min_len, int max_len, int allow_special_chars) {
                     has_repeats = 1;
                     break;
                 }
-                if (j > 0 && combination[j] == combination[j - 1]) {
+                if (!allow_repeats && j > 0 && combination[j] == combination[j - 1]) {
                     has_repeats = 1;
                     break;
                 }
@@ -78,10 +80,9 @@ void generate_combinations(int min_len, int max_len, int allow_special_chars) {
                     fclose(fp);
                     fp = NULL;
                     file_count++;
-               
                 }
             }
-            current_time = time(NULL);
+            time(&current_time);
             if (current_time - last_tick_time >= 10) {
                 last_tick_time = current_time;
                 printf(".");
