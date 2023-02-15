@@ -11,7 +11,7 @@ void generate_combinations(int min_len, int max_len, int allow_special_chars, in
 void generate_words(int* num_words, int** word_lengths, char*** words, FILE* wordlist_fp);
 void pad_words(int num_words, int* word_lengths, char** words, int max_word_length);
 int has_repeats(char* combination, int combination_len, int allow_repeats);
-void write_combination(char* combination, int combination_len, int allow_repeats, int allow_special_chars, FILE** fp, char* filename, unsigned long long* file_count, FILE* list_fp);
+void write_combination(char* combination, int combination_len, int allow_repeats, int allow_special_chars, FILE** fp, char* filename, unsigned long long* file_count, FILE* list_fp, char** words, int num_words);
 
 int main() {
     int min_len, max_len, allow_special_chars, allow_repeats;
@@ -30,72 +30,6 @@ int main() {
     return 0;
 }
 
-void generate_combinations(int min_len, int max_len, int allow_special_chars, int allow_repeats, char *wordlist_file) {
-    char* filename = (char*) malloc(MAX_FILENAME_LEN);
-    char* combination = (char*) malloc(max_len + 1);
-    memset(combination, 0, max_len + 1);
-    int combination_len;
-    FILE* fp = NULL;
-    unsigned long long file_count = 0;
-    FILE* list_fp = fopen("generated_files.txt", "w"); // open file to write generated files
-    time_t current_time;
-    time_t last_tick_time, last_minute_time;
-    time(&last_tick_time);
-    last_minute_time = last_tick_time;
-    int num_words = 0;
-    int* word_lengths = NULL;
-    char** words = NULL;
-    if (wordlist_file != NULL) {
-        FILE* wordlist_fp = fopen(wordlist_file, "r");
-        if (wordlist_fp != NULL) {
-            generate_words(&num_words, &word_lengths, &words, wordlist_fp);
-            fclose(wordlist_fp);
-        }
-    }
-    for (combination_len = min_len; combination_len <= max_len; combination_len++) {
-        unsigned long long num_combinations = pow(allow_special_chars ? (NUM_CHARS + 33) : NUM_CHARS, combination_len);
-        for (unsigned long long i = 0; i < num_combinations; i++) {
-            memset(combination, 0, max_len + 1);
-            unsigned long long j = i;
-            int k;
-            for (k = 0; k < combination_len; k++) {
-                int index = j % (allow_special_chars ? (NUM_CHARS + 33) : NUM_CHARS);
-                if (index < 10) {
-                    combination[k] = '0' + index;
-                } else if (index < 36) {
-                    combination[k] = 'a' + index - 10;
-                } else if (index < 62) {
-                    combination[k] = 'A' + index - 36;
-                } else {
-                    combination[k] = "!@#$%^&*()_+-=[]{};':\",./<>?\\|"[index - 62];
-                }
-                j /= (allow_special_chars ? (NUM_CHARS + 33) : NUM_CHARS);
-            }
-            int has_repeating_chars = has_repeats(combination, combination_len, allow_repeats);
-            if (!has_repeating_chars) {
-                write_combination(combination, combination_len, allow_repeats, allow_special_chars, &fp, filename, &file_count, list_fp);
-            }
-        }
-        time(&current_time);
-        if (current_time - last_tick_time >= 10) {
-            last_tick_time = current_time;
-            printf(".");
-            fflush(stdout);
-        }
-        if (current_time - last_minute_time >= 60) {
-            last_minute_time = current_time;
-            char* c = ctime(&current_time);
-            printf("\nCurrent time: %s", c);
-        }
-    }
-    if (fp != NULL) {
-        fclose(fp);
-    }
-    fclose(list_fp);
-    free(combination);
-    free(filename);
-}
-
 int has_repeats(char* combination, int combination_len, int allow_repeats) {
     if (allow_repeats) {
         return 0;
@@ -109,22 +43,58 @@ int has_repeats(char* combination, int combination_len, int allow_repeats) {
     return 0;
 }
 
-void write_combination(char* combination, int combination_len, int allow_repeats, int allow_special_chars, FILE** fp, char* filename, unsigned long long* file_count, FILE* list_fp) {
-    if (!has_repeats(combination, combination_len, allow_repeats)) {
-        if (*fp == NULL) {
-            snprintf(filename, MAX_FILENAME_LEN, "generated%04llu.txt", *file_count);
-            *fp = fopen(filename, "w");
-            printf("Creating file: %s\n", filename);
-            fprintf(list_fp, "%s %s\n", combination, filename);
+void write_combination(char* combination, int combination_len, int allow_repeats, int allow_special_chars, FILE** fp, char* filename, unsigned long long* file_count, FILE* list_fp, char** words, int num_words) {
+    if (*fp == NULL) {
+        // Create file name with format generatedXXXX.txt
+        sprintf(filename, "generated%04llu.txt", *file_count);
+        (*file_count)++;
+        *fp = fopen(filename, "w");
+        // Write filename to list file
+        fprintf(list_fp, "%s\n", filename);
+    }
+    if (num_words > 0) {
+        for (int i = 0; i < num_words; i++) {
+            // Write out word from word list
+            fprintf(*fp, "%s", words[i]);
+            // Add remaining characters to end of word to create full combination
+            for (int j = strlen(words[i]); j < combination_len; j++) {
+                char c;
+                do {
+                    c = rand() % NUM_CHARS;
+                    if (c < 10) {
+                        c += '0';
+                    } else if (c < 36) {
+                        c += 'a' - 10;
+                    } else {
+                        c += 'A' - 36;
+                    }
+                } while (has_repeats(combination, j, allow_repeats) != 0 || (c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && !allow_special_chars);
+                combination[j] = c;
+            }
+            // Write out full combination
+            fprintf(*fp, "%s\n", combination);
+        }
+    } else {
+        // Write out full combination if no word list is provided
+        for (int i = 0; i < combination_len; i++) {
+            char c;
+            do {
+                c = rand() % NUM_CHARS;
+                if (c < 10) {
+                    c += '0';
+                } else if (c < 36) {
+                    c += 'a' - 10;
+                } else {
+                    c += 'A' - 36;
+                }
+            } while (has_repeats(combination, i, allow_repeats) != 0 || (c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && !allow_special_chars);
+
+            combination[i] = c;
         }
         fprintf(*fp, "%s\n", combination);
-        if (ftell(*fp) >= 1000000000) {  // 1 GB
-            fclose(*fp);
-            *fp = NULL;
-            (*file_count)++;
-        }
     }
 }
+
 
 
 
@@ -156,4 +126,81 @@ void pad_words(int num_words, int* word_lengths, char** words, int max_word_leng
             words[i][word_lengths[i] + j] = ' ';
         }
     }
+}
+
+void generate_combinations(int min_len, int max_len, int allow_special_chars, int allow_repeats, char* wordlist_file) {
+    char* filename = (char*) malloc(MAX_FILENAME_LEN);
+    char* combination = (char*) malloc(max_len + 1);
+    memset(combination, 0, max_len + 1);
+    int combination_len;
+    FILE* fp = NULL;
+    unsigned long long file_count = 0;
+    FILE* list_fp = fopen("generated_files.txt", "w"); // open file to write generated files
+    time_t current_time;
+    time_t last_tick_time, last_minute_time;
+    time(&last_tick_time);
+    last_minute_time = last_tick_time;
+    int num_words = 0;
+    int* word_lengths = NULL;
+    char** words = NULL;
+    if (wordlist_file != NULL) {
+        FILE* wordlist_fp = fopen(wordlist_file, "r");
+        if (wordlist_fp != NULL) {
+            char line[256];
+            while (fgets(line, 256, wordlist_fp) != NULL) {
+                // Remove newline character
+                line[strcspn(line, "\n")] = 0;
+                // Allocate memory for word
+                int word_length = strlen(line);
+                if (word_length > 0) {
+                    num_words++;
+                    word_lengths = (int*) realloc(word_lengths, num_words * sizeof(int));
+                    word_lengths[num_words - 1] = word_length;
+                    words = (char**) realloc(words, num_words * sizeof(char*));
+                    words[num_words - 1] = (char*) malloc(word_length + 1);
+                    strcpy(words[num_words - 1], line);
+                }
+            }
+            fclose(wordlist_fp);
+        }
+    }
+
+    // Generate combinations with word list words and all possible combinations using remaining characters
+    for (int i = 0; i < num_words; i++) {
+        for (combination_len = min_len - word_lengths[i]; combination_len <= max_len - word_lengths[i]; combination_len++) {
+            int num_combinations = pow(NUM_CHARS, combination_len);
+            for (int j = 0; j < num_combinations; j++) {
+                int combination_idx = 0;
+                for (int k = 0; k < word_lengths[i]; k++) {
+                    combination[combination_idx++] = words[i][k];
+                }
+                for (int k = 0; k < combination_len; k++) {
+                    combination[combination_idx++] = 'a' + (j / (int) pow(NUM_CHARS, k)) % NUM_CHARS;
+                }
+                if (has_repeats(combination, combination_len + word_lengths[i], allow_repeats) == 0) {
+                    void write_combination(char* combination, int combination_len, int allow_repeats, int allow_special_chars, FILE** fp, char* filename, unsigned long long* file_count, FILE* list_fp, char** words, int num_words);
+
+                }
+            }
+        }
+    }
+
+    // Close file
+    if (fp != NULL) {
+        fclose(fp);
+        printf("Generated %llu combinations in file %s.\n", file_count, filename);
+    } else {
+        printf("No combinations were generated.\n");
+    }
+
+    // Free memory
+    free(filename);
+    free(combination);
+    for (int i = 0; i < num_words; i++) {
+        free(words[i]);
+    }
+    free(words);
+    free(word_lengths);
+
+    // Close list
 }
