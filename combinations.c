@@ -37,7 +37,6 @@ int main() {
 
 
 // Generate combinations of characters
-// Generate all combinations of characters
 void generate_combinations(int min_len, int max_len, int allow_special_chars, int allow_repeats, char *wordlist_file) {
     char* filename = (char*) malloc(MAX_FILENAME_LEN);
     char* combination = (char*) malloc(max_len + 1);
@@ -58,65 +57,37 @@ void generate_combinations(int min_len, int max_len, int allow_special_chars, in
         if (wordlist_fp != NULL) {
             generate_words(&num_words, &word_lengths, &words, wordlist_fp);
             fclose(wordlist_fp);
+        } else {
+            printf("Failed to open wordlist file '%s'.\n", wordlist_file);
+            return;
         }
+    } else {
+        printf("Wordlist file is required.\n");
+        return;
     }
 
-    // Generate combinations of characters
+    // Generate combinations using words from wordlist
     for (combination_len = min_len; combination_len <= max_len; combination_len++) {
-        unsigned long long num_combinations = pow(allow_special_chars ? (NUM_CHARS + 33) : NUM_CHARS, combination_len);
+        unsigned long long num_combinations = pow(num_words, combination_len);
         for (unsigned long long i = 0; i < num_combinations; i++) {
             memset(combination, 0, max_len + 1);
             unsigned long long j = i;
             int k;
             for (k = 0; k < combination_len; k++) {
-                int index = j % (allow_special_chars ? (NUM_CHARS + 33) : NUM_CHARS);
-                if (index < 10) {
-                    combination[k] = '0' + index;
-                } else if (index < 36) {
-                    combination[k] = 'a' + index - 10;
-                } else if (index < 62) {
-                    combination[k] = 'A' + index - 36;
-                } else {
-                    combination[k] = "!@#$%^&*()_+-=[]{};':\",./<>?\\|"[index - 62];
-                }
-                j /= (allow_special_chars ? (NUM_CHARS + 33) : NUM_CHARS);
+                int index = j % num_words;
+                strcat(combination, words[index]);
+                j /= num_words;
             }
-            int has_repeating_chars = has_repeats(combination, combination_len, allow_repeats);
+            int has_repeating_chars = has_repeats(combination, strlen(combination), allow_repeats);
             if (!has_repeating_chars) {
-                write_combination(combination, combination_len, allow_repeats, allow_special_chars, &fp, filename, &file_count, list_fp);
+                write_combination(combination, strlen(combination), allow_repeats, allow_special_chars, &fp, filename, &file_count, list_fp);
             }
         }
         // Print progress and time every 10 seconds, and print current time every minute
         time(&current_time);
         print_progress_and_time(current_time, &last_tick_time, &last_minute_time);
     }
-
-    // Generate combinations using words from wordlist
-    if (num_words > 0) {
-//        pad_words(num_words, word_lengths, words, max_len);
-        for (int i = min_len; i <= max_len; i++) {
-            unsigned long long num_combinations = pow(num_words, i);
-            for (unsigned long long j = 0; j < num_combinations; j++) {
-                memset(combination, 0, max_len + 1);
-                unsigned long long k = j;
-                int l;
-                int index;
-            for (l = 0; l < i; l++) {
-                if (l == 0) {
-                    index = k % num_words;
-                } else {
-                    k /= num_words;
-                    index = k % num_words;
-                }
-                strcat(combination, words[index]);
-            }
-            int has_repeating_chars = has_repeats(combination, i, allow_repeats);
-            if (!has_repeating_chars) {
-                write_combination(combination, i, allow_repeats, allow_special_chars, &fp, filename, &file_count, list_fp);
-                }
-            }
-        }
-    }
+    free_memory(num_words, word_lengths, words);
 }
 
 // Check if a combination of characters has repeating characters
