@@ -25,7 +25,7 @@ void free_words(char** words, int num_words);
 void generate_word_combinations_helper(int combination_len, int max_len, char** words, int num_words, int allow_repeats, FILE* fp, char* filename, unsigned long long* file_count, FILE* list_fp, char* combination, int index, int* used_words);
 char** load_words(char* filename, int* num_words);
 
-// Main function
+
 int main() {
     int min_len, max_len, allow_special_chars, allow_repeats;
     char wordlist_file[MAX_FILENAME_LEN];
@@ -37,11 +37,20 @@ int main() {
     scanf("%d", &allow_special_chars);
     printf("Allow repetitive characters? (0=no, 1=yes): ");
     scanf("%d", &allow_repeats);
-    printf("Enter wordlist file name (optional): ");
+    printf("Enter wordlist file name (optional, enter 0 if not using): ");
     scanf("%s", wordlist_file);
-    generate_combinations(min_len, max_len, allow_special_chars, allow_repeats, wordlist_file);
+
+    // check if the user wants to use a wordlist or not
+    if (strcmp(wordlist_file, "0") == 0) {
+        generate_combinations(min_len, max_len, allow_special_chars, allow_repeats, NULL);
+    } else {
+        generate_combinations(min_len, max_len, allow_special_chars, allow_repeats, wordlist_file);
+    }
+
     return 0;
 }
+
+
 
 void free_words(char** words, int num_words) {
     for (int i = 0; i < num_words; i++) {
@@ -70,55 +79,34 @@ void generate_combinations(int min_len, int max_len, int allow_special_chars, in
         exit(1);
     }
 
-    // Open wordlist file
-    char** words;
-    int num_words;
+    // Generate combinations using words from dictionary
     if (wordlist_file[0] == '\0') {
-        // Generate combinations using words from dictionary
-        words = NULL;
-        num_words = 0;
-    } else {
+        generate_word_combinations(max_len, max_len, NULL, 0, allow_repeats, fp, filename, &file_count, NULL, NULL);
+    }
+
+    // Generate combinations using words from wordlist
+    else {
         // Load words from file
         FILE* list_fp = fopen(wordlist_file, "r");
         if (list_fp == NULL) {
             fprintf(stderr, "Error: Could not open wordlist file %s.\n", wordlist_file);
             exit(1);
         }
+        char** words;
+        int num_words;
         words = load_words(wordlist_file, &num_words);
         fclose(list_fp);
-    }
-
-    // Generate combinations using words from wordlist
-    if (num_words > 0) {
-        int* used_words = malloc(num_words * sizeof(int));
+        int* used_words = calloc(num_words, sizeof(int));
         if (used_words == NULL) {
             fprintf(stderr, "Error: Could not allocate memory.\n");
             exit(1);
         }
         for (int i = min_len; i <= max_len; i++) {
-            char* combination = malloc((i + 1) * sizeof(char));
-            printf("%s\n", combination);  // Debugging line
-            if (combination == NULL) {
-                fprintf(stderr, "Error: Could not allocate memory.\n");
-                exit(1);
-            }
             memset(used_words, 0, num_words * sizeof(int));
-            generate_word_combinations(max_len, max_len, NULL, 0, allow_repeats, fp, filename, &file_count, NULL, NULL);
-            free(combination);
+            generate_word_combinations(i, max_len, words, num_words, allow_repeats, fp, filename, &file_count, NULL, used_words);
         }
         free(used_words);
         free_words(words, num_words);
-    }
-
-    // Generate combinations using all characters
-    else {
-        char* combination = malloc((max_len + 1) * sizeof(char));
-        if (combination == NULL) {
-            fprintf(stderr, "Error: Could not allocate memory.\n");
-            exit(1);
-        }
-        generate_word_combinations(max_len, max_len, NULL, 0, allow_repeats, fp, filename, &file_count, NULL, NULL);
-        free(combination);
     }
 
     // Close output file
@@ -138,10 +126,8 @@ void generate_word_combinations(int combination_len, int max_len, char** words, 
 }
 
 void generate_word_combinations_helper(int combination_len, int max_len, char** words, int num_words, int allow_repeats, FILE* fp, char* filename, unsigned long long* file_count, FILE* list_fp, char* combination, int index, int* used_words) {
-    if (index >= max_len) {
-        fprintf(fp, "%s\n", combination);
-        printf("%s\n", combination);  // Debugging line
-        (*file_count)++;
+    if (strlen(combination) >= max_len) {
+        write_combination(combination, max_len, allow_repeats, 0, &fp, filename, file_count, list_fp);
         return;
     }
 
@@ -157,17 +143,23 @@ void generate_word_combinations_helper(int combination_len, int max_len, char** 
         char* new_combination = (char*) malloc(max_len + 1);
         strcpy(new_combination, combination);
         strcat(new_combination, words[i]);
-        printf("%s\n", new_combination);  // Debug check
+
+        int* new_used_words = NULL;
         if (!allow_repeats) {
-            used_words[i] = 1;
+            new_used_words = malloc(num_words * sizeof(int));
+            if (new_used_words == NULL) {
+                fprintf(stderr, "Error: Could not allocate memory.\n");
+                exit(1);
+            }
+            memcpy(new_used_words, used_words, num_words * sizeof(int));
+            new_used_words[i] = 1;
         }
 
-        generate_word_combinations_helper(combination_len, max_len, words, num_words, allow_repeats, fp, filename, file_count, list_fp, new_combination, index + strlen(words[i]), used_words);
+        generate_word_combinations_helper(combination_len, max_len, words, num_words, allow_repeats, fp, filename, file_count, list_fp, new_combination, index + strlen(words[i]), new_used_words);
 
         free(new_combination);
-
-        if (!allow_repeats) {
-            used_words[i] = 0;
+        if (new_used_words != NULL) {
+            free(new_used_words);
         }
     }
 }
@@ -204,7 +196,7 @@ char** load_words(char* filename, int* num_words) {
     while (fgets(line, MAX_WORD_LEN, fp) != NULL) {
         // Remove the newline character from the end of the line
         line[strcspn(line, "\n")] = '\0';
-        printf("%s\n", line);  // Debug check
+        //printf("%s\n", line);  // Debug check
 
         // Allocate memory for the current word
         int word_length = strlen(line);
@@ -253,6 +245,8 @@ void print_progress_and_time(time_t current_time, time_t* last_tick_time, time_t
 }
 
 void write_combination(char* combination, int combination_len, int allow_repeats, int allow_special_chars, FILE** fp, char* filename, unsigned long long* file_count, FILE* list_fp) {
+    printf("DEBUG: combination = \"%s\"\n", combination);
+    printf("Combination: %s\n", combination);    
     if (!has_repeats(combination, combination_len, allow_repeats)) {
         // Create new file if necessary
         if (*fp == NULL) {
@@ -270,8 +264,8 @@ void write_combination(char* combination, int combination_len, int allow_repeats
         // Close file and create new one if it's too big
         if (ftell(*fp) >= 1000000000) {  // 1 GB
             fclose(*fp);
-            *fp = NULL;
             (*file_count)++;
+            *fp = NULL;
         }
     }
 }
