@@ -47,16 +47,15 @@ char** read_lines_from_file(const char* filename, int* num_lines) {
     size_t len = 0;
     ssize_t read;
     while ((read = getline(&lines[i], &len, fp)) != -1) {
-        if (read == 0) {
-            printf("Error: empty line\n");
-            // Free memory allocated so far
-            for (int j = 0; j <= i; j++) {
-                free(lines[j]);
+        if (read == 1 && lines[i][0] == '\n') {
+            // Don't remove the newline character for empty lines
+            lines[i][0] = '\0';
+        } else {
+            // Remove the newline character, if present
+            if (lines[i][read-1] == '\n') {
+                lines[i][read-1] = '\0';
             }
-            free(lines);
-            return NULL;
         }
-        lines[i][read-1] = '\0'; // remove the newline character
         i++;
     }
 
@@ -79,19 +78,29 @@ char** read_lines_from_file(const char* filename, int* num_lines) {
 void print_combination(FILE* file, char** lines, int* indices, int num_indices) {
     for (int i = 0; i < num_indices; i++) {
         fprintf(file, "%s", lines[indices[i]]);
-        if (i < num_indices - 1) {
-            fprintf(file, " ");
-        }
     }
     fprintf(file, "\n");
 }
-// Function to generate all possible combinations of the lines and print them to a file
-// Function to generate all possible combinations of the lines and print them to a file
-// Function to generate all possible combinations of the lines and print them to a file
+
 void generate_combinations(FILE* file, char** lines, int num_lines, int min_len, int max_len) {
     int* indices = (int*) malloc(max_len * sizeof(int));
     if (indices == NULL) {
         printf("Error allocating memory\n");
+        return;
+    }
+
+    // Find the index of the special line
+    int special_line_index = -1;
+    for (int i = 0; i < num_lines; i++) {
+        if (strlen(lines[i]) > 1) {
+            special_line_index = i;
+            break;
+        }
+    }
+
+    if (special_line_index == -1) {
+        printf("Error: no line with length > 1\n");
+        free(indices);
         return;
     }
 
@@ -102,22 +111,16 @@ void generate_combinations(FILE* file, char** lines, int num_lines, int min_len,
 
     int i = max_len - 1;
     while (i >= 0) {
-        // Check if the current combination contains a line with length > 1
-        int has_long_line = 0;
+        // Print the current combination if it meets the length criteria
+        int len = 0;
+        int has_special_line = 0;
         for (int j = 0; j <= i; j++) {
-            if (strlen(lines[indices[j]]) > 1) {
-                if (has_long_line) {
-                    // Skip this combination if it already contains a line with length > 1
-                    has_long_line = 2;
-                    break;
-                } else {
-                    has_long_line = 1;
-                }
+            len += strlen(lines[indices[j]]);
+            if (indices[j] == special_line_index) {
+                has_special_line = 1;
             }
         }
-
-        // Print the current combination if it meets the length and long line criteria
-        if (has_long_line == 1 && i+1 >= min_len && i+1 <= max_len) {
+        if (len >= min_len && len <= max_len && has_special_line) {
             print_combination(file, lines, indices, i+1);
         }
 
