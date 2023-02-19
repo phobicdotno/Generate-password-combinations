@@ -47,14 +47,17 @@ char** read_lines_from_file(const char* filename, int* num_lines) {
     size_t len = 0;
     ssize_t read;
     while ((read = getline(&lines[i], &len, fp)) != -1) {
-        if (read > 0) {
-            if (lines[i][read-1] == '\n') {
-                if (read > 2 || (read == 2 && lines[i][0] != '\r')) {
-                    lines[i][read-1] = '\0';
-                }
+        if (read == 0) {
+            printf("Error: empty line\n");
+            // Free memory allocated so far
+            for (int j = 0; j <= i; j++) {
+                free(lines[j]);
             }
-            i++;
+            free(lines);
+            return NULL;
         }
+        lines[i][read-1] = '\0'; // remove the newline character
+        i++;
     }
 
     if (ferror(fp)) {
@@ -67,20 +70,30 @@ char** read_lines_from_file(const char* filename, int* num_lines) {
         return NULL;
     }
 
-    *num_lines = i;
+    *num_lines = count;
     fclose(fp);
     return lines;
 }
 
 // Function to print a combination to a file
 void print_combination(FILE* file, char** lines, int* indices, int num_indices) {
-    fprintf(file, "%s", lines[indices[0]]);
-    for (int i = 1; i < num_indices; i++) {
-        fprintf(file, "%s", lines[indices[i]]);
+    // Determine if the combination contains a line with length over 1
+    int has_long_line = 0;
+    for (int i = 0; i < num_indices; i++) {
+        if (strlen(lines[indices[i]]) > 1) {
+            has_long_line = 1;
+            break;
+        }
     }
-    fprintf(file, "\n");
-}
 
+    // If the combination contains a line with length over 1, print it to the file
+    if (has_long_line) {
+        for (int i = 0; i < num_indices; i++) {
+            fprintf(file, "%s", lines[indices[i]]);
+        }
+        fprintf(file, "\n");
+    }
+}
 
 // Function to generate all possible combinations of the lines and print them to a file
 void generate_combinations(FILE* file, char** lines, int num_lines, int min_len, int max_len) {
@@ -90,33 +103,33 @@ void generate_combinations(FILE* file, char** lines, int num_lines, int min_len,
         return;
     }
 
-    // Generate all combinations that start with each line
-    for (int start_line = 0; start_line < num_lines; start_line++) {
-        // Initialize the indices to the first max_len lines starting with the current line
-        int max_len_for_start_line = (max_len < num_lines - start_line ? max_len : num_lines - start_line);
-        for (int i = 0; i < max_len_for_start_line; i++) {
-            indices[i] = start_line + i;
+    // Initialize the indices to the first max_len lines
+    for (int i = 0; i < max_len; i++) {
+        indices[i] = i;
+    }
+
+    int i = max_len - 1;
+    while (i >= 0) {
+        // Check if the combination meets the length criteria and contains a line with length over 1
+        int len = 0;
+        int has_long_line = 0;
+        for (int j = 0; j <= i; j++) {
+            len += strlen(lines[indices[j]]);
+            if (strlen(lines[indices[j]]) > 1) {
+                has_long_line = 1;
+            }
+        }
+        if (len >= min_len && len <= max_len && has_long_line) {
+            print_combination(file, lines, indices, i+1);
         }
 
-        int i = max_len_for_start_line - 1;
-        while (i >= 0) {
-            // Print the current combination if it meets the length criteria
-            int len = 0;
-            for (int j = 0; j <= i; j++) {
-                len += strlen(lines[indices[j]]);
-            }
-            if (len >= min_len && len <= max_len) {
-                print_combination(file, lines, indices, i+1);
-            }
-
-            // Move to the next combination
-            indices[i]++;
-            if (indices[i] > num_lines - (max_len_for_start_line - i)) {
-                i--;
-            } else if (i < max_len_for_start_line - 1) {
-                indices[i+1] = indices[i] + 1;
-                i++;
-            }
+        // Move to the next combination
+        indices[i]++;
+        if (indices[i] > num_lines - (max_len - i)) {
+            i--;
+        } else if (i < max_len - 1) {
+            indices[i+1] = indices[i] + 1;
+            i++;
         }
     }
 
@@ -140,6 +153,20 @@ int main() {
     FILE* file = fopen("combinations.txt", "w");
     if (file == NULL) {
         printf("Error opening output file\n");
+        return 1;
+    }
+
+    int has_long_line = 0;
+    for (int i = 0; i < num_lines; i++) {
+        if (strlen(lines[i]) > 1) {
+            has_long_line = 1;
+            break;
+        }
+    }
+
+    if (!has_long_line) {
+        printf("Error: no line with length > 1\n");
+        fclose(file);
         return 1;
     }
 
