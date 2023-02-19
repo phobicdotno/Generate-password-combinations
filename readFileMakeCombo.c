@@ -90,29 +90,33 @@ void generate_combinations(FILE* file, char** lines, int num_lines, int min_len,
         return;
     }
 
-    // Initialize the indices to the first max_len lines
-    for (int i = 0; i < max_len; i++) {
-        indices[i] = i;
-    }
-
-    int i = max_len - 1;
-    while (i >= 0) {
-        // Print the current combination if it meets the length criteria
-        int len = 0;
-        for (int j = 0; j <= i; j++) {
-            len += strlen(lines[indices[j]]);
-        }
-        if (len >= min_len && len <= max_len) {
-            print_combination(file, lines, indices, i+1);
+    // Generate all combinations that start with each line
+    for (int start_line = 0; start_line < num_lines; start_line++) {
+        // Initialize the indices to the first max_len lines starting with the current line
+        int max_len_for_start_line = (max_len < num_lines - start_line ? max_len : num_lines - start_line);
+        for (int i = 0; i < max_len_for_start_line; i++) {
+            indices[i] = start_line + i;
         }
 
-        // Move to the next combination
-        indices[i]++;
-        if (indices[i] > num_lines - (max_len - i)) {
-            i--;
-        } else if (i < max_len - 1) {
-            indices[i+1] = indices[i] + 1;
-            i++;
+        int i = max_len_for_start_line - 1;
+        while (i >= 0) {
+            // Print the current combination if it meets the length criteria
+            int len = 0;
+            for (int j = 0; j <= i; j++) {
+                len += strlen(lines[indices[j]]);
+            }
+            if (len >= min_len && len <= max_len) {
+                print_combination(file, lines, indices, i+1);
+            }
+
+            // Move to the next combination
+            indices[i]++;
+            if (indices[i] > num_lines - (max_len_for_start_line - i)) {
+                i--;
+            } else if (i < max_len_for_start_line - 1) {
+                indices[i+1] = indices[i] + 1;
+                i++;
+            }
         }
     }
 
