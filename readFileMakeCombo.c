@@ -43,42 +43,41 @@ char** read_lines_from_file(const char* filename, int* num_lines) {
     }
 
     // Read the lines from the file
-    int i = 0;
-    size_t len = 0;
-    ssize_t read;
-    while ((read = getline(&lines[i], &len, fp)) != -1) {
-        if (read == 0) {
-            printf("Error: empty line\n");
-            // Free memory allocated so far
-            for (int j = 0; j <= i; j++) {
-                free(lines[j]);
-            }
-            free(lines);
-            return NULL;
+int i = 0;
+size_t len = 0;
+ssize_t read;
+while ((read = getline(&lines[i], &len, fp)) != -1) {
+    if (read > 0) {
+        if (lines[i][read-1] == '\n') {
+            lines[i][read-1] = '\0';
         }
-        lines[i][read-1] = '\0'; // remove the newline character
         i++;
     }
+}
 
-    if (ferror(fp)) {
-        printf("Error reading file\n");
-        // Free memory allocated so far
-        for (int j = 0; j < i; j++) {
-            free(lines[j]);
-        }
-        free(lines);
-        return NULL;
+if (ferror(fp)) {
+    printf("Error reading file\n");
+    // Free memory allocated so far
+    for (int j = 0; j < i; j++) {
+        free(lines[j]);
     }
+    free(lines);
+    return NULL;
+}
 
-    *num_lines = count;
-    fclose(fp);
-    return lines;
+*num_lines = i;
+fclose(fp);
+return lines;
+
 }
 
 // Function to print a combination to a file
 void print_combination(FILE* file, char** lines, int* indices, int num_indices) {
     for (int i = 0; i < num_indices; i++) {
-        fprintf(file, "%s ", lines[indices[i]]);
+        fprintf(file, "%s", lines[indices[i]]);
+        if (i < num_indices - 1) {
+            fprintf(file, " ");
+        }
     }
     fprintf(file, "\n");
 }
