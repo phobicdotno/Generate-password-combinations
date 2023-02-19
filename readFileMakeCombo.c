@@ -114,21 +114,33 @@ void generate_combinations(FILE* file, char** lines, int num_lines, int min_len,
         // Print the current combination if it meets the length criteria
         int len = 0;
         int has_special_line = 0;
+        int num_special_lines = 0;
         for (int j = 0; j <= i; j++) {
             len += strlen(lines[indices[j]]);
             if (indices[j] == special_line_index) {
                 has_special_line = 1;
+                num_special_lines++;
             }
         }
-        if (len >= min_len && len <= max_len && has_special_line) {
+        if (len >= min_len && len <= max_len && has_special_line && num_special_lines == 1) {
             print_combination(file, lines, indices, i+1);
         }
 
         // Move to the next combination
-        indices[i]++;
-        if (indices[i] > num_lines - (max_len - i)) {
-            i--;
-        } else if (i < max_len - 1) {
+        int found_next = 0;
+        while (!found_next) {
+            indices[i]++;
+            if (indices[i] <= num_lines - (max_len - i)) {
+                found_next = 1;
+            } else {
+                i--;
+                if (i < 0) {
+                    break;
+                }
+            }
+        }
+
+        if (i < max_len - 1) {
             indices[i+1] = indices[i] + 1;
             i++;
         }
