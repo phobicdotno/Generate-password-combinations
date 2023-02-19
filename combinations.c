@@ -97,6 +97,7 @@ void generate_combinations(int min_len, int max_len, int allow_special_chars, in
         }
         for (int i = min_len; i <= max_len; i++) {
             char* combination = malloc((i + 1) * sizeof(char));
+            printf("%s\n", combination);  // Debugging line
             if (combination == NULL) {
                 fprintf(stderr, "Error: Could not allocate memory.\n");
                 exit(1);
@@ -139,6 +140,7 @@ void generate_word_combinations(int combination_len, int max_len, char** words, 
 void generate_word_combinations_helper(int combination_len, int max_len, char** words, int num_words, int allow_repeats, FILE* fp, char* filename, unsigned long long* file_count, FILE* list_fp, char* combination, int index, int* used_words) {
     if (index >= max_len) {
         fprintf(fp, "%s\n", combination);
+        printf("%s\n", combination);  // Debugging line
         (*file_count)++;
         return;
     }
@@ -155,7 +157,7 @@ void generate_word_combinations_helper(int combination_len, int max_len, char** 
         char* new_combination = (char*) malloc(max_len + 1);
         strcpy(new_combination, combination);
         strcat(new_combination, words[i]);
-
+        printf("%s\n", new_combination);  // Debug check
         if (!allow_repeats) {
             used_words[i] = 1;
         }
@@ -202,6 +204,7 @@ char** load_words(char* filename, int* num_words) {
     while (fgets(line, MAX_WORD_LEN, fp) != NULL) {
         // Remove the newline character from the end of the line
         line[strcspn(line, "\n")] = '\0';
+        printf("%s\n", line);  // Debug check
 
         // Allocate memory for the current word
         int word_length = strlen(line);
@@ -249,13 +252,16 @@ void print_progress_and_time(time_t current_time, time_t* last_tick_time, time_t
     }
 }
 
-// Write combination of characters to file
 void write_combination(char* combination, int combination_len, int allow_repeats, int allow_special_chars, FILE** fp, char* filename, unsigned long long* file_count, FILE* list_fp) {
     if (!has_repeats(combination, combination_len, allow_repeats)) {
         // Create new file if necessary
         if (*fp == NULL) {
             snprintf(filename, MAX_FILENAME_LEN, "generated%04llu.txt", *file_count);
             *fp = fopen(filename, "w");
+            if (*fp == NULL) {
+                fprintf(stderr, "Error: Could not open output file %s.\n", filename);
+                exit(1);
+            }
             printf("Creating file: %s\n", filename);
             fprintf(list_fp, "%s %s\n", combination, filename);
         }
